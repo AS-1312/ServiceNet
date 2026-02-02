@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Moon, Sun, Menu, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
+import { WalletButton } from "./wallet-button";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -70,9 +71,9 @@ export function Navbar() {
             )}
 
             {/* Wallet Connect Button */}
-            <button className="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
-              <span>Connect Wallet</span>
-            </button>
+            <div className="hidden md:block">
+              <WalletButton />
+            </div>
 
             {/* Mobile menu button */}
             <button
@@ -108,9 +109,9 @@ export function Navbar() {
                 {item.label}
               </Link>
             ))}
-            <button className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
-              Connect Wallet
-            </button>
+            <div className="w-full">
+              <WalletButton />
+            </div>
           </div>
         </div>
       )}

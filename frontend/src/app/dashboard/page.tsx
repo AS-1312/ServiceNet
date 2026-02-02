@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, DollarSign, Activity, Clock, TrendingUp, AlertCircle, X } from "lucide-react";
+import { ENSProfile } from "@/components/ens-profile";
+import { ENSServiceResolver } from "@/components/ens-service-resolver";
 
 export default function ConsumerDashboard() {
   const [showAddFunds, setShowAddFunds] = useState(false);
@@ -154,6 +156,12 @@ export default function ConsumerDashboard() {
             <div className="text-3xl font-bold mb-1">{stats.avgCost}</div>
             <div className="text-xs text-muted-foreground">Last 7 days</div>
           </div>
+        </div>
+
+        {/* ENS Profile & Service Resolver */}
+        <div className="grid lg:grid-cols-2 gap-8 mb-8">
+          <ENSProfile />
+          <ENSServiceResolver />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
