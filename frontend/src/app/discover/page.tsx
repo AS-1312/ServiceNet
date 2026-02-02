@@ -125,7 +125,6 @@ export default function DiscoverPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Discover Services</h1>
           <p className="text-muted-foreground text-lg">
@@ -133,9 +132,7 @@ export default function DiscoverPage() {
           </p>
         </div>
 
-        {/* Search and Filters */}
         <div className="mb-8 space-y-4">
-          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
@@ -147,9 +144,7 @@ export default function DiscoverPage() {
             />
           </div>
 
-          {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Category Filter */}
             <div className="flex-1">
               <div className="flex items-center space-x-2 overflow-x-auto pb-2">
                 {categories.map((category) => (
@@ -168,7 +163,6 @@ export default function DiscoverPage() {
               </div>
             </div>
 
-            {/* Sort */}
             <div className="flex items-center space-x-2">
               <Filter className="w-5 h-5 text-muted-foreground" />
               <select
@@ -185,12 +179,10 @@ export default function DiscoverPage() {
           </div>
         </div>
 
-        {/* Results Count */}
         <div className="mb-6 text-sm text-muted-foreground">
           Showing {sortedServices.length} of {services.length} services
         </div>
 
-        {/* Services Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedServices.map((service, i) => (
             <Link
@@ -198,7 +190,6 @@ export default function DiscoverPage() {
               href={`/service/${service.name}`}
               className="group p-6 bg-card rounded-2xl border border-border hover:border-primary transition-all card-hover"
             >
-              {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors">
@@ -217,12 +208,10 @@ export default function DiscoverPage() {
                 </div>
               </div>
 
-              {/* Description */}
               <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                 {service.description}
               </p>
 
-              {/* Tags */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {service.tags.slice(0, 3).map((tag, j) => (
                   <span
@@ -234,7 +223,6 @@ export default function DiscoverPage() {
                 ))}
               </div>
 
-              {/* Stats */}
               <div className="flex items-center justify-between text-sm pt-4 border-t border-border">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-1 text-muted-foreground">
@@ -252,7 +240,6 @@ export default function DiscoverPage() {
           ))}
         </div>
 
-        {/* Empty State */}
         {sortedServices.length === 0 && (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
