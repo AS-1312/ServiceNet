@@ -7,5 +7,3 @@ export const config = getDefaultConfig({
   chains: [mainnet, sepolia, base, baseSepolia],
   ssr: true,
 });
-
-// Made with Bob

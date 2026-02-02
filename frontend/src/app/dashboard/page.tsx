@@ -104,7 +104,6 @@ export default function ConsumerDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h1 className="text-4xl font-bold mb-2">Consumer Dashboard</h1>
@@ -119,7 +118,6 @@ export default function ConsumerDashboard() {
           </Link>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center justify-between mb-2">
@@ -158,14 +156,12 @@ export default function ConsumerDashboard() {
           </div>
         </div>
 
-        {/* ENS Profile & Service Resolver */}
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
           <ENSProfile />
           <ENSServiceResolver />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Active Sessions */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="text-2xl font-bold mb-6">Active Sessions</h2>
@@ -199,7 +195,6 @@ export default function ConsumerDashboard() {
                       </button>
                     </div>
 
-                    {/* Balance Progress */}
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-muted-foreground">Balance</span>
@@ -219,7 +214,6 @@ export default function ConsumerDashboard() {
                       </div>
                     </div>
 
-                    {/* Calls Progress */}
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-muted-foreground">Calls Used</span>
@@ -235,7 +229,6 @@ export default function ConsumerDashboard() {
                       </div>
                     </div>
 
-                    {/* Low Balance Warning */}
                     {session.status === "low" && (
                       <div className="flex items-center space-x-2 p-3 bg-warning/10 border border-warning/20 rounded-lg mb-4">
                         <AlertCircle className="w-4 h-4 text-warning" />
@@ -243,7 +236,6 @@ export default function ConsumerDashboard() {
                       </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex gap-2">
                       <button
                         onClick={() => setShowAddFunds(true)}
@@ -266,7 +258,6 @@ export default function ConsumerDashboard() {
               </div>
             </div>
 
-            {/* Usage Chart Placeholder */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Usage Overview</h2>
@@ -286,9 +277,7 @@ export default function ConsumerDashboard() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Recent Transactions */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
               <div className="space-y-3">
@@ -315,7 +304,6 @@ export default function ConsumerDashboard() {
               </button>
             </div>
 
-            {/* Quick Stats */}
             <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl border border-primary/20 p-6">
               <h3 className="text-lg font-semibold mb-4">Spending Summary</h3>
               <div className="space-y-3">
@@ -338,7 +326,6 @@ export default function ConsumerDashboard() {
               </div>
             </div>
 
-            {/* Favorite Services */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <h3 className="text-lg font-semibold mb-4">Favorite Services</h3>
               <div className="space-y-2">
@@ -358,7 +345,6 @@ export default function ConsumerDashboard() {
         </div>
       </div>
 
-      {/* Add Funds Modal (Simple overlay) */}
       {showAddFunds && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card rounded-2xl border border-border p-6 max-w-md w-full">

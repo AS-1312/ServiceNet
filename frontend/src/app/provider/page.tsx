@@ -48,7 +48,6 @@ export default function ProviderDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h1 className="text-4xl font-bold mb-2">Provider Dashboard</h1>
@@ -63,7 +62,6 @@ export default function ProviderDashboard() {
           </Link>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center justify-between mb-2">
@@ -103,7 +101,6 @@ export default function ProviderDashboard() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* My Services */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="text-2xl font-bold mb-6">My Services</h2>
@@ -177,7 +174,6 @@ export default function ProviderDashboard() {
               </div>
             </div>
 
-            {/* Analytics Chart Placeholder */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Analytics</h2>
@@ -197,9 +193,7 @@ export default function ProviderDashboard() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Recent Activity */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
               <div className="space-y-3">
@@ -223,7 +217,6 @@ export default function ProviderDashboard() {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
               <div className="space-y-2">
@@ -246,7 +239,6 @@ export default function ProviderDashboard() {
               </div>
             </div>
 
-            {/* Earnings Summary */}
             <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl border border-primary/20 p-6">
               <h3 className="text-lg font-semibold mb-4">Earnings Summary</h3>
               <div className="space-y-3">

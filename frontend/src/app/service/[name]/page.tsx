@@ -81,7 +81,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Back Button */}
         <Link
           href="/discover"
           className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
@@ -91,9 +90,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
         </Link>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Service Header */}
             <div className="bg-card rounded-2xl border border-border p-8">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -106,7 +103,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                 </div>
               </div>
 
-              {/* Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-border">
                 <div>
                   <div className="flex items-center space-x-2 text-muted-foreground mb-1">
@@ -142,7 +138,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                 </div>
               </div>
 
-              {/* Tags */}
               <div className="flex flex-wrap gap-2 pt-6 border-t border-border mt-6">
                 {service.tags.map((tag, i) => (
                   <span
@@ -155,7 +150,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="bg-card rounded-2xl border border-border">
               <div className="border-b border-border">
                 <div className="flex space-x-1 p-2">
@@ -176,7 +170,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
               </div>
 
               <div className="p-6">
-                {/* Overview Tab */}
                 {activeTab === "overview" && (
                   <div className="space-y-6">
                     <div>
@@ -223,7 +216,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                   </div>
                 )}
 
-                {/* Playground Tab */}
                 {activeTab === "playground" && (
                   <div className="space-y-6">
                     <div>
@@ -290,7 +282,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                   </div>
                 )}
 
-                {/* Reviews Tab */}
                 {activeTab === "reviews" && (
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
@@ -331,9 +322,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Open Session Card */}
             <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
               <h3 className="text-lg font-semibold mb-4">Open Session</h3>
               
@@ -376,7 +365,6 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
               </div>
             </div>
 
-            {/* Documentation */}
             <div className="bg-card rounded-2xl border border-border p-6">
               <h3 className="text-lg font-semibold mb-4">Documentation</h3>
               <div className="space-y-3">

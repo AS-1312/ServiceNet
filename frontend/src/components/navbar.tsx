@@ -28,7 +28,6 @@ export function Navbar() {
     <nav className="fixed top-0 w-full z-50 glass border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group">
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="text-white font-bold text-lg">S</span>
@@ -36,7 +35,6 @@ export function Navbar() {
             <span className="text-xl font-bold gradient-text">ServiceNet</span>
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
               <Link
@@ -53,9 +51,7 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
             {mounted && (
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -70,12 +66,10 @@ export function Navbar() {
               </button>
             )}
 
-            {/* Wallet Connect Button */}
             <div className="hidden md:block">
               <WalletButton />
             </div>
 
-            {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg hover:bg-secondary transition-colors"
@@ -91,7 +85,6 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-lg">
           <div className="px-4 py-4 space-y-2">

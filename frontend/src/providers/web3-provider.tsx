@@ -24,5 +24,3 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     </WagmiProvider>
   );
 }
-
-// Made with Bob

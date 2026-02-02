@@ -99,5 +99,3 @@ export function useENSResolver() {
     error,
   };
 }
-
-// Made with Bob

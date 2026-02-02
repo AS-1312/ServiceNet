@@ -30,7 +30,6 @@ export function ENSProfile() {
   return (
     <div className="p-6 bg-card rounded-2xl border border-border">
       <div className="flex items-start gap-4">
-        {/* Avatar */}
         <div className="flex-shrink-0">
           {ensAvatar ? (
             <img
@@ -45,7 +44,6 @@ export function ENSProfile() {
           )}
         </div>
 
-        {/* Profile Info */}
         <div className="flex-1 min-w-0">
           <div className="mb-2">
             {ensName ? (
@@ -62,7 +60,6 @@ export function ENSProfile() {
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex flex-wrap gap-2 mt-3">
             <button
               onClick={copyAddress}
@@ -106,7 +103,6 @@ export function ENSProfile() {
         </div>
       </div>
 
-      {/* ENS Badge */}
       {ensName && (
         <div className="mt-4 pt-4 border-t border-border">
           <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-medium">
@@ -121,5 +117,3 @@ export function ENSProfile() {
     </div>
   );
 }
-
-// Made with Bob

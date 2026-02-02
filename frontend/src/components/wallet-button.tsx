@@ -106,5 +106,3 @@ export function WalletButton() {
     </ConnectButton.Custom>
   );
 }
-
-// Made with Bob

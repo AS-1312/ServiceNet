@@ -19,7 +19,6 @@ export function ENSServiceResolver() {
 
   return (
     <div className="space-y-6">
-      {/* Search Form */}
       <div className="p-6 bg-card rounded-2xl border border-border">
         <h3 className="text-lg font-semibold mb-4">Resolve ENS Service</h3>
         <form onSubmit={handleResolve} className="space-y-4">
@@ -59,7 +58,6 @@ export function ENSServiceResolver() {
         )}
       </div>
 
-      {/* Resolved Service Details */}
       {resolvedService && (
         <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
           <div className="flex items-start justify-between">
@@ -81,7 +79,6 @@ export function ENSServiceResolver() {
             </a>
           </div>
 
-          {/* Service Metadata */}
           {Object.keys(resolvedService.metadata).length > 0 ? (
             <div className="space-y-3 pt-4 border-t border-border">
               <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
@@ -186,5 +183,3 @@ export function ENSServiceResolver() {
     </div>
   );
 }
-
-// Made with Bob
