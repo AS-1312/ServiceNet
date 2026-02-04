@@ -11,7 +11,7 @@ export function useENS() {
 
   const { data: fetchedEnsName } = useEnsName({
     address: address,
-    chainId: 1, // Mainnet for ENS
+    chainId: 11155111, // Sepolia
   });
 
   const { data: fetchedEnsAvatar } = useEnsAvatar({
