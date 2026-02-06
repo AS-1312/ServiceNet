@@ -7,6 +7,7 @@ import { RainbowKitProvider, darkTheme, lightTheme } from '@rainbow-me/rainbowki
 import { config } from '@/config/wagmi';
 import { useTheme } from 'next-themes';
 import { ReactNode, useState } from 'react';
+import { YellowProvider } from './yellow-provider';
 
 export function Web3Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -18,7 +19,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         <RainbowKitProvider
           theme={theme === 'dark' ? darkTheme() : lightTheme()}
         >
-          {children}
+          <YellowProvider>
+            {children}
+          </YellowProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
