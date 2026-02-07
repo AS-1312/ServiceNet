@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Filter, TrendingUp, Star, Activity } from "lucide-react";
+import { Search, Filter, TrendingUp, Star, Activity, Loader2 } from "lucide-react";
+import { useAccount } from "wagmi";
+import { useGetTotalServices, useGetProviderServices } from "@/hooks";
+import { formatUSDC } from "@/lib/contracts";
+import { ServiceCard } from "@/components/ServiceCard";
 
 export default function DiscoverPage() {
+  const { address, isConnected } = useAccount();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("popular");
+
+  // Fetch on-chain data
+  const { data: totalServices, isLoading: loadingTotal } = useGetTotalServices();
+  const { data: serviceNodes, isLoading: loadingServices } = useGetProviderServices(address);
 
   const categories = [
     { id: "all", name: "All Services" },
@@ -18,7 +27,8 @@ export default function DiscoverPage() {
     { id: "compute", name: "Compute" }
   ];
 
-  const services = [
+  // Mock services for display (in production, fetch from contract)
+  const mockServices = [
     {
       name: "weather.api.eth",
       category: "data",
@@ -99,6 +109,14 @@ export default function DiscoverPage() {
     }
   ];
 
+  // For MVP: Display mock services (contract doesn't have getAllServices function)
+  // In production, you'd use an indexer/subgraph to fetch all registered services
+  const services = mockServices;
+  const isLoading = loadingTotal || loadingServices;
+  
+  // Check if there are any services on-chain
+  const hasOnChainServices = totalServices && totalServices > BigInt(0);
+
   const filteredServices = services.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -128,9 +146,61 @@ export default function DiscoverPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Discover Services</h1>
           <p className="text-muted-foreground text-lg">
-            Browse {services.length} decentralized services powered by ENS
+            {isLoading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Loading on-chain data...
+              </span>
+            ) : (
+              <>
+                Browse decentralized services powered by ENS
+              </>
+            )}
           </p>
+          
+          {!isLoading && (
+            <>
+              {hasOnChainServices ? (
+                <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-sm">
+                    📊 <strong>{totalServices?.toString()}</strong> service{totalServices !== BigInt(1) ? 's' : ''} registered on-chain
+                  </p>
+                  {isConnected && serviceNodes && serviceNodes.length > 0 && (
+                    <p className="text-sm mt-1">
+                      🎉 You have registered <strong>{serviceNodes.length}</strong> service{serviceNodes.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <p className="text-sm">
+                    ℹ️ Showing demo services. Connect your wallet and register a service to see it here!
+                  </p>
+                </div>
+              )}
+            </>
+          )}
         </div>
+
+        {/* Display user's real on-chain services */}
+        {!isLoading && isConnected && serviceNodes && serviceNodes.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">Your Services</h2>
+                <p className="text-sm text-muted-foreground">
+                  Services you've registered on ServiceNet
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {serviceNodes.map((node) => (
+                <ServiceCard key={node} ensNode={node} isRealService={true} />
+              ))}
+            </div>
+            <div className="mt-8 border-t border-border"></div>
+          </div>
+        )}
 
         <div className="mb-8 space-y-4">
           <div className="relative">
@@ -179,12 +249,47 @@ export default function DiscoverPage() {
           </div>
         </div>
 
-        <div className="mb-6 text-sm text-muted-foreground">
-          Showing {sortedServices.length} of {services.length} services
+        <div className="mb-6 flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {sortedServices.length} {hasOnChainServices ? '(demo services for UI preview)' : 'demo services'}
+          </div>
+          {isConnected && !isLoading && (
+            <Link
+              href="/provider/register"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+            >
+              + Register Your Service
+            </Link>
+          )}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedServices.map((service, i) => (
+        {isLoading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="p-6 bg-card rounded-2xl border border-border animate-pulse">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="h-5 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                  </div>
+                  <div className="h-8 w-16 bg-muted rounded-lg"></div>
+                </div>
+                <div className="h-12 bg-muted rounded mb-4"></div>
+                <div className="flex gap-2 mb-4">
+                  <div className="h-6 w-16 bg-muted rounded"></div>
+                  <div className="h-6 w-16 bg-muted rounded"></div>
+                  <div className="h-6 w-16 bg-muted rounded"></div>
+                </div>
+                <div className="flex justify-between pt-4 border-t border-border">
+                  <div className="h-4 w-24 bg-muted rounded"></div>
+                  <div className="h-4 w-16 bg-muted rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedServices.map((service, i) => (
             <Link
               key={i}
               href={`/service/${service.name}`}
@@ -237,8 +342,9 @@ export default function DiscoverPage() {
                 <span className="text-xs text-muted-foreground">{service.priceModel}</span>
               </div>
             </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {sortedServices.length === 0 && (
           <div className="text-center py-16">

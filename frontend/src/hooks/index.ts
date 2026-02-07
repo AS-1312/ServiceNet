@@ -8,6 +8,8 @@ export {
   useServiceNet,
   useServiceNetWrite,
   useService,
+  useGetTotalServices,
+  useGetProviderServices,
 } from './useServiceNet';
 
 // Yellow Session Manager hooks

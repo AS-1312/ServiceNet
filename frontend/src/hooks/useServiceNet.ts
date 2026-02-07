@@ -7,6 +7,43 @@ import type { Service, Rating, ServiceMetrics, FormattedService } from '@/types/
 import { useEffect, useState } from 'react';
 
 /**
+ * Get total number of services
+ */
+export function useGetTotalServices() {
+  const { data, isLoading, error } = useReadContract({
+    ...ServiceNetConfig,
+    functionName: 'totalServices',
+  });
+
+  return {
+    data: data as bigint | undefined,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Get provider's services
+ */
+export function useGetProviderServices(providerAddress: `0x${string}` | undefined) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    ...ServiceNetConfig,
+    functionName: 'getProviderServices',
+    args: providerAddress ? [providerAddress] : undefined,
+    query: {
+      enabled: !!providerAddress,
+    },
+  });
+
+  return {
+    data: data as `0x${string}`[] | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+}
+
+/**
  * Hook to interact with ServiceNet contract
  */
 export function useServiceNet() {
@@ -96,43 +133,6 @@ export function useServiceNet() {
   };
 
   /**
-   * Get total number of services
-   */
-  const useGetTotalServices = () => {
-    const { data, isLoading, error } = useReadContract({
-      ...ServiceNetConfig,
-      functionName: 'totalServices',
-    });
-
-    return {
-      totalServices: data as bigint | undefined,
-      isLoading,
-      error,
-    };
-  };
-
-  /**
-   * Get provider's services
-   */
-  const useGetProviderServices = (providerAddress: `0x${string}` | undefined) => {
-    const { data, isLoading, error, refetch } = useReadContract({
-      ...ServiceNetConfig,
-      functionName: 'getProviderServices',
-      args: providerAddress ? [providerAddress] : undefined,
-      query: {
-        enabled: !!providerAddress,
-      },
-    });
-
-    return {
-      serviceNodes: data as `0x${string}`[] | undefined,
-      isLoading,
-      error,
-      refetch,
-    };
-  };
-
-  /**
    * Check if user has rated a service
    */
   const useHasRated = (ensNode: `0x${string}` | undefined, userAddress: `0x${string}` | undefined) => {
@@ -173,8 +173,6 @@ export function useServiceNet() {
     useGetServiceByName,
     useGetServiceMetrics,
     useGetRating,
-    useGetTotalServices,
-    useGetProviderServices,
     useHasRated,
     useGetMinimumStake,
   };
