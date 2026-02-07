@@ -1,12 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, X, Info } from "lucide-react";
+import { useAccount } from 'wagmi';
+import { useServiceNetWrite } from '@/hooks';
+import { useServiceNet } from '@/hooks/useServiceNet';
+import { formatEther } from 'viem';
+import { ArrowLeft, Plus, X, Info, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function RegisterServicePage() {
+  // Wallet connection
+  const { address, isConnected } = useAccount();
+  
+  // Contract hooks
+  const { useGetMinimumStake } = useServiceNet();
+  const { minimumStake, isLoading: loadingMinStake } = useGetMinimumStake();
+  const { registerService, isPending, isConfirming, isSuccess, error, hash } = useServiceNetWrite();
+  
+  // Form state
   const [ensName, setEnsName] = useState("");
   const [pricing, setPricing] = useState("0.001");
+  const [stakeAmount, setStakeAmount] = useState("0.01");
   const [pricingModel, setPricingModel] = useState("per-call");
   const [endpoint, setEndpoint] = useState("");
   const [category, setCategory] = useState("api");
@@ -15,6 +29,14 @@ export default function RegisterServicePage() {
   const [newTag, setNewTag] = useState("");
   const [rateLimit, setRateLimit] = useState("1000");
   const [chains, setChains] = useState<string[]>(["ethereum"]);
+  
+  // Set minimum stake when loaded
+  useEffect(() => {
+    if (minimumStake) {
+      const minStakeFormatted = formatEther(minimumStake);
+      setStakeAmount(minStakeFormatted);
+    }
+  }, [minimumStake]);
 
   const categories = [
     { value: "ai", label: "AI Models" },
@@ -50,19 +72,25 @@ export default function RegisterServicePage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({
-      ensName,
-      pricing,
-      pricingModel,
-      endpoint,
-      category,
-      description,
-      tags,
-      rateLimit,
-      chains
-    });
+    
+    if (!isConnected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    
+    if (!ensName || !pricing || !stakeAmount) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    try {
+      await registerService(ensName, pricing, stakeAmount);
+      // Transaction submitted - UI will update via isSuccess
+    } catch (err) {
+      console.error('Registration failed:', err);
+    }
   };
 
   return (
@@ -83,6 +111,53 @@ export default function RegisterServicePage() {
           </p>
         </div>
 
+        {/* Wallet Connection Warning */}
+        {!isConnected && (
+          <div className="mb-6 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-yellow-500 mb-1">Wallet Not Connected</h3>
+              <p className="text-sm text-muted-foreground">
+                Please connect your wallet to register a service.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {isSuccess && (
+          <div className="mb-6 p-6 bg-green-500/10 border border-green-500/20 rounded-xl flex items-start space-x-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-green-500 mb-1">Service Registered Successfully!</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                Your service <strong>{ensName}</strong> has been registered on-chain.
+              </p>
+              {hash && (
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-500 hover:underline"
+                >
+                  View transaction →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-6 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-500 mb-1">Registration Failed</h3>
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="bg-card rounded-2xl border border-border p-6">
             <h2 className="text-xl font-semibold mb-6">Basic Information</h2>
@@ -97,8 +172,9 @@ export default function RegisterServicePage() {
                   value={ensName}
                   onChange={(e) => setEnsName(e.target.value)}
                   placeholder="weather.api.eth"
-                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={!isConnected}
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   Your ENS name will be used to identify your service on the marketplace
@@ -112,8 +188,9 @@ export default function RegisterServicePage() {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={!isConnected}
                 >
                   {categories.map((cat) => (
                     <option key={cat.value} value={cat.value}>
@@ -132,8 +209,9 @@ export default function RegisterServicePage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe what your service does..."
                   rows={4}
-                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={!isConnected}
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   This will be displayed on your service page
@@ -188,32 +266,54 @@ export default function RegisterServicePage() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Price (USDC) <span className="text-destructive">*</span>
+                  Price per Call (USDC) <span className="text-destructive">*</span>
                 </label>
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <input
                       type="number"
                       step="0.0001"
+                      min="0"
                       value={pricing}
                       onChange={(e) => setPricing(e.target.value)}
                       placeholder="0.001"
                       className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                       required
+                      disabled={!isConnected}
                     />
                   </div>
-                  <select
-                    value={pricingModel}
-                    onChange={(e) => setPricingModel(e.target.value)}
-                    className="px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="per-call">per call</option>
-                    <option value="per-minute">per minute</option>
-                    <option value="per-mb">per MB</option>
-                  </select>
+                  <div className="px-4 py-3 bg-muted border border-border rounded-lg text-muted-foreground">
+                    per call
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Set your pricing in USDC. Consumers will pay this amount for each unit of usage.
+                  Set your pricing in USDC. Consumers will pay this amount for each API call.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Stake Amount (ETH) <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min={minimumStake ? formatEther(minimumStake) : "0.01"}
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(e.target.value)}
+                  placeholder="0.01"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  required
+                  disabled={!isConnected}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  {loadingMinStake ? (
+                    "Loading minimum stake..."
+                  ) : minimumStake ? (
+                    `Minimum stake: ${formatEther(minimumStake)} ETH. This will be held as collateral.`
+                  ) : (
+                    "Stake amount required to register your service. Minimum: 0.01 ETH."
+                  )}
                 </p>
               </div>
 
@@ -304,9 +404,22 @@ export default function RegisterServicePage() {
             </Link>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors"
+              disabled={!isConnected || isPending || isConfirming || isSuccess}
+              className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Register Service
+              {isPending || isConfirming ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {isPending ? "Waiting for approval..." : "Registering..."}
+                </>
+              ) : isSuccess ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Registered!
+                </>
+              ) : (
+                "Register Service"
+              )}
             </button>
           </div>
         </form>
