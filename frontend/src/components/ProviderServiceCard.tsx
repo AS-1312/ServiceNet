@@ -8,6 +8,8 @@ import { ServiceNetConfig } from "@/config/contracts";
 import { useServiceNetWrite, useService } from "@/hooks";
 import { formatUSDC } from "@/lib/contracts";
 import type { Service } from "@/types/contracts";
+import { useTransactionToast } from "@/contexts/ToastContext";
+import { InlineTransactionStatus } from "@/components/TransactionStatus";
 
 interface ProviderServiceCardProps {
   ensNode: `0x${string}`;
@@ -18,6 +20,15 @@ interface ProviderServiceCardProps {
 export function ProviderServiceCard({ ensNode, isSelected, onSelect }: ProviderServiceCardProps) {
   const [showPriceEdit, setShowPriceEdit] = useState(false);
   const [newPrice, setNewPrice] = useState("");
+  const [toastId, setToastId] = useState<string>("");
+  
+  // Transaction toasts
+  const {
+    showTransactionPending,
+    showTransactionSubmitted,
+    showTransactionSuccess,
+    showTransactionError,
+  } = useTransactionToast();
   
   // Fetch service data
   const { data: serviceData } = useReadContract({
@@ -43,17 +54,49 @@ export function ProviderServiceCard({ ensNode, isSelected, onSelect }: ProviderS
     toggleService, 
     updatePrice,
     isPending: isUpdating, 
+    isConfirming: isConfirmingUpdate,
     isSuccess: updateSuccess,
-    error: updateError 
+    error: updateError,
+    hash: txHash,
   } = useServiceNetWrite();
 
-  // Handle successful updates
+  // Handle transaction states
   useEffect(() => {
-    if (updateSuccess) {
-      alert('Service updated successfully!');
-      setShowPriceEdit(false);
+    if (isUpdating && !toastId) {
+      const id = showTransactionPending('Update Pending');
+      setToastId(id);
     }
-  }, [updateSuccess]);
+  }, [isUpdating, toastId, showTransactionPending]);
+
+  useEffect(() => {
+    if (isConfirmingUpdate && toastId && txHash) {
+      showTransactionSubmitted(toastId, txHash);
+    }
+  }, [isConfirmingUpdate, toastId, txHash, showTransactionSubmitted]);
+
+  useEffect(() => {
+    if (updateSuccess && toastId) {
+      showTransactionSuccess(
+        toastId,
+        'Service Updated!',
+        'Your service has been updated successfully.',
+        txHash
+      );
+      setShowPriceEdit(false);
+      setToastId("");
+    }
+  }, [updateSuccess, toastId, txHash, showTransactionSuccess]);
+
+  useEffect(() => {
+    if (updateError && toastId) {
+      showTransactionError(
+        toastId,
+        'Update Failed',
+        updateError
+      );
+      setToastId("");
+    }
+  }, [updateError, toastId, showTransactionError]);
 
   if (!serviceData) {
     return (
@@ -163,11 +206,17 @@ export function ProviderServiceCard({ ensNode, isSelected, onSelect }: ProviderS
             <div className="flex gap-2">
               <button
                 onClick={handleUpdatePrice}
-                disabled={isUpdating || !newPrice}
+                disabled={isUpdating || isConfirmingUpdate || !newPrice}
                 className="flex-1 px-3 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isUpdating && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isUpdating ? 'Updating...' : 'Update Price'}
+                <InlineTransactionStatus
+                  isPending={isUpdating}
+                  isConfirming={isConfirmingUpdate}
+                  isSuccess={false}
+                  defaultText="Update Price"
+                  pendingText="Approving..."
+                  confirmingText="Updating..."
+                />
               </button>
               <button
                 onClick={() => setShowPriceEdit(false)}

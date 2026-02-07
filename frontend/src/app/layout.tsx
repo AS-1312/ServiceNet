@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Web3Provider } from "@/providers/web3-provider";
 import { Navbar } from "@/components/navbar";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastContainer } from "@/components/ToastContainer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,10 +41,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Web3Provider>
-            <Navbar />
-            <main className="pt-16">
-              {children}
-            </main>
+            <ToastProvider>
+              <Navbar />
+              <main className="pt-16">
+                {children}
+              </main>
+              <ToastContainer />
+            </ToastProvider>
           </Web3Provider>
         </ThemeProvider>
       </body>
