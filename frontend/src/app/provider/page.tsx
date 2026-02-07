@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, TrendingUp, DollarSign, Activity, Users, Settings, ExternalLink } from "lucide-react";
+import { Plus, TrendingUp, DollarSign, Activity, Users, Settings, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useAccount } from "wagmi";
+import { useGetProviderServices } from "@/hooks";
+import { ProviderServiceCard } from "@/components/ProviderServiceCard";
 
 export default function ProviderDashboard() {
+  const { address, isConnected } = useAccount();
   const [selectedService, setSelectedService] = useState(0);
+
+  // Fetch provider's services from contract
+  const { data: serviceNodes, isLoading: loadingServices } = useGetProviderServices(address);
 
   const myServices = [
     {
@@ -38,16 +45,34 @@ export default function ProviderDashboard() {
     { type: "settlement", service: "weather.api.eth", amount: "$12.45", time: "2 hours ago" }
   ];
 
+  // Calculate stats from real services
   const stats = {
-    totalRevenue: "$4.20",
-    totalCalls: "4,197",
+    totalRevenue: "$4.20", // Would be calculated from all services
+    totalCalls: "4,197",   // Would be calculated from all services
     avgUptime: "99.87%",
-    activeSessions: 20
+    activeSessions: serviceNodes?.length || 0
   };
+
+  const isLoading = loadingServices;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Wallet Connection Check */}
+        {!isConnected && (
+          <div className="mb-8 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              <div>
+                <h3 className="font-semibold text-yellow-600 dark:text-yellow-400">Wallet Not Connected</h3>
+                <p className="text-sm text-yellow-600/80 dark:text-yellow-400/80 mt-1">
+                  Connect your wallet to manage your services and track earnings.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h1 className="text-4xl font-bold mb-2">Provider Dashboard</h1>
@@ -65,11 +90,17 @@ export default function ProviderDashboard() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-muted-foreground text-sm">Total Revenue (24h)</span>
-              <DollarSign className="w-5 h-5 text-success" />
+              <span className="text-muted-foreground text-sm">My Services</span>
+              <Settings className="w-5 h-5 text-primary" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.totalRevenue}</div>
-            <div className="text-xs text-success">+15% from yesterday</div>
+            <div className="text-3xl font-bold mb-1">
+              {isLoading ? (
+                <Loader2 className="w-8 h-8 animate-spin" />
+              ) : (
+                serviceNodes?.length || 0
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">Registered services</div>
           </div>
 
           <div className="bg-card rounded-2xl border border-border p-6">
@@ -105,73 +136,58 @@ export default function ProviderDashboard() {
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="text-2xl font-bold mb-6">My Services</h2>
 
-              <div className="space-y-4">
-                {myServices.map((service, i) => (
-                  <div
-                    key={i}
-                    className={`p-6 rounded-xl border-2 transition-all cursor-pointer ${
-                      selectedService === i
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => setSelectedService(i)}
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="p-6 rounded-xl border-2 border-border animate-pulse">
+                      <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
+                      <div className="h-4 bg-muted rounded w-full mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-2/3 mb-4"></div>
+                      <div className="grid grid-cols-4 gap-4 mb-4">
+                        <div className="h-12 bg-muted rounded"></div>
+                        <div className="h-12 bg-muted rounded"></div>
+                        <div className="h-12 bg-muted rounded"></div>
+                        <div className="h-12 bg-muted rounded"></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 h-10 bg-muted rounded"></div>
+                        <div className="flex-1 h-10 bg-muted rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !isConnected ? (
+                <div className="text-center py-12">
+                  <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Connect your wallet to view your services</p>
+                </div>
+              ) : serviceNodes && serviceNodes.length > 0 ? (
+                <div className="space-y-4">
+                  {serviceNodes.map((ensNode, i) => (
+                    <ProviderServiceCard 
+                      key={ensNode} 
+                      ensNode={ensNode}
+                      isSelected={selectedService === i}
+                      onSelect={() => setSelectedService(i)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Services Registered</h3>
+                  <p className="text-muted-foreground mb-6">
+                    You haven't registered any services yet. Start monetizing your APIs!
+                  </p>
+                  <Link
+                    href="/provider/register"
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-1">{service.name}</h3>
-                        <span className="inline-flex items-center px-2 py-1 bg-success/10 text-success rounded text-xs font-medium">
-                          {service.status}
-                        </span>
-                      </div>
-                      <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
-                        <Settings className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Calls Today</div>
-                        <div className="text-lg font-bold">{service.calls}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Revenue</div>
-                        <div className="text-lg font-bold text-success">{service.revenue}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Uptime</div>
-                        <div className="text-lg font-bold">{service.uptime}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Avg Response</div>
-                        <div className="text-lg font-bold">{service.avgResponse}</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Active Sessions: </span>
-                        <span className="font-semibold">{service.activeSessions}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Pending: </span>
-                        <span className="font-semibold">{service.pendingSettlement}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 mt-4">
-                      <Link
-                        href={`/service/${service.name}`}
-                        className="flex-1 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-center text-sm font-medium transition-colors"
-                      >
-                        View Public Page
-                      </Link>
-                      <button className="flex-1 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-sm font-medium transition-colors">
-                        Withdraw Funds
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    <Plus className="w-5 h-5" />
+                    <span>Register Your First Service</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-6">
