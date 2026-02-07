@@ -16,7 +16,7 @@ export function useENS() {
 
   const { data: fetchedEnsAvatar } = useEnsAvatar({
     name: fetchedEnsName ? normalize(fetchedEnsName) : undefined,
-    chainId: 1,
+    chainId: 11155111, // Sepolia
   });
 
   useEffect(() => {
