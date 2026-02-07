@@ -2,12 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, DollarSign, Activity, Clock, TrendingUp, AlertCircle, X } from "lucide-react";
+import { Plus, DollarSign, Activity, Clock, TrendingUp, AlertCircle, X, Loader2 } from "lucide-react";
+import { useAccount } from "wagmi";
+import { useUserSessions, useUSDCOperations } from "@/hooks";
 import { ENSProfile } from "@/components/ens-profile";
 import { ENSServiceResolver } from "@/components/ens-service-resolver";
+import { SessionCard } from "@/components/SessionCard";
 
 export default function ConsumerDashboard() {
+  const { address, isConnected } = useAccount();
   const [showAddFunds, setShowAddFunds] = useState(false);
+
+  // Fetch user's sessions from contract
+  const { sessionIds, isLoading: loadingSessions } = useUserSessions();
+  
+  // Fetch USDC balance
+  const { balance, balanceFormatted, isLoading: loadingBalance } = useUSDCOperations();
 
   const activeSessions = [
     {
@@ -77,12 +87,15 @@ export default function ConsumerDashboard() {
     }
   ];
 
+  // Mock stats (in production, calculate from session data)
   const stats = {
     totalSpent: "$4.52",
-    activeSessions: 3,
+    activeSessions: sessionIds?.length || 0,
     totalCalls: 733,
     avgCost: "$0.006"
   };
+
+  const isLoading = loadingSessions || loadingBalance;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -104,6 +117,21 @@ export default function ConsumerDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Wallet Connection Check */}
+        {!isConnected && (
+          <div className="mb-8 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              <div>
+                <h3 className="font-semibold text-yellow-600 dark:text-yellow-400">Wallet Not Connected</h3>
+                <p className="text-sm text-yellow-600/80 dark:text-yellow-400/80 mt-1">
+                  Connect your wallet to view your active sessions and usage data.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h1 className="text-4xl font-bold mb-2">Consumer Dashboard</h1>
@@ -121,11 +149,17 @@ export default function ConsumerDashboard() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-card rounded-2xl border border-border p-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-muted-foreground text-sm">Total Spent (24h)</span>
+              <span className="text-muted-foreground text-sm">USDC Balance</span>
               <DollarSign className="w-5 h-5 text-primary" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.totalSpent}</div>
-            <div className="text-xs text-muted-foreground">Across all services</div>
+            <div className="text-3xl font-bold mb-1">
+              {isLoading ? (
+                <Loader2 className="w-8 h-8 animate-spin" />
+              ) : (
+                `$${balanceFormatted}`
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">Available balance</div>
           </div>
 
           <div className="bg-card rounded-2xl border border-border p-6">
@@ -133,7 +167,13 @@ export default function ConsumerDashboard() {
               <span className="text-muted-foreground text-sm">Active Sessions</span>
               <Activity className="w-5 h-5 text-success" />
             </div>
-            <div className="text-3xl font-bold mb-1">{stats.activeSessions}</div>
+            <div className="text-3xl font-bold mb-1">
+              {isLoading ? (
+                <Loader2 className="w-8 h-8 animate-spin" />
+              ) : (
+                stats.activeSessions
+              )}
+            </div>
             <div className="text-xs text-muted-foreground">Currently running</div>
           </div>
 
@@ -166,96 +206,48 @@ export default function ConsumerDashboard() {
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="text-2xl font-bold mb-6">Active Sessions</h2>
 
-              <div className="space-y-4">
-                {activeSessions.map((session, i) => (
-                  <div
-                    key={i}
-                    className="p-6 rounded-xl border-2 border-border hover:border-primary/50 transition-all"
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="p-6 rounded-xl border-2 border-border animate-pulse">
+                      <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
+                      <div className="h-4 bg-muted rounded w-full mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-2/3 mb-4"></div>
+                      <div className="h-2 bg-muted rounded w-full mb-4"></div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 h-10 bg-muted rounded"></div>
+                        <div className="flex-1 h-10 bg-muted rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !isConnected ? (
+                <div className="text-center py-12">
+                  <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Connect your wallet to view sessions</p>
+                </div>
+              ) : sessionIds && sessionIds.length > 0 ? (
+                <div className="space-y-4">
+                  {sessionIds.map((sessionId) => (
+                    <SessionCard key={sessionId} sessionId={sessionId} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Active Sessions</h3>
+                  <p className="text-muted-foreground mb-6">
+                    You haven't opened any sessions yet. Browse services and start using APIs!
+                  </p>
+                  <Link
+                    href="/discover"
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <Link
-                          href={`/service/${session.service}`}
-                          className="text-lg font-semibold hover:text-primary transition-colors"
-                        >
-                          {session.service}
-                        </Link>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getStatusColor(session.status)}`}>
-                            {session.status}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex items-center space-x-1">
-                            <Clock className="w-3 h-3" />
-                            <span>Expires in {session.expires}</span>
-                          </span>
-                        </div>
-                      </div>
-                      <button className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors">
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Balance</span>
-                        <span className="font-semibold">
-                          {session.balance} / {session.total}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${
-                            session.status === "low" ? "bg-warning" : "bg-success"
-                          }`}
-                          style={{
-                            width: `${(parseFloat(session.balance.replace("$", "")) / parseFloat(session.total.replace("$", ""))) * 100}%`
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Calls Used</span>
-                        <span className="font-semibold">
-                          {session.calls} / {session.maxCalls}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary transition-all"
-                          style={{ width: `${getProgressPercentage(session.calls, session.maxCalls)}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {session.status === "low" && (
-                      <div className="flex items-center space-x-2 p-3 bg-warning/10 border border-warning/20 rounded-lg mb-4">
-                        <AlertCircle className="w-4 h-4 text-warning" />
-                        <span className="text-sm text-warning">Low balance - consider adding funds</span>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowAddFunds(true)}
-                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Add Funds
-                      </button>
-                      <button className="flex-1 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm font-medium transition-colors">
-                        Close Session
-                      </button>
-                      <Link
-                        href={`/service/${session.service}`}
-                        className="px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        View Service
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    <Plus className="w-5 h-5" />
+                    <span>Browse Services</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-6">
@@ -305,23 +297,29 @@ export default function ConsumerDashboard() {
             </div>
 
             <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl border border-primary/20 p-6">
-              <h3 className="text-lg font-semibold mb-4">Spending Summary</h3>
+              <h3 className="text-lg font-semibold mb-4">Account Summary</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Today</span>
-                  <span className="font-semibold">{stats.totalSpent}</span>
+                  <span className="text-sm text-muted-foreground">USDC Balance</span>
+                  <span className="font-semibold">
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      `$${balanceFormatted}`
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">This Week</span>
-                  <span className="font-semibold">$28.40</span>
+                  <span className="text-sm text-muted-foreground">Active Sessions</span>
+                  <span className="font-semibold">{stats.activeSessions}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">This Month</span>
-                  <span className="font-semibold">$124.60</span>
+                  <span className="text-sm text-muted-foreground">Total Calls</span>
+                  <span className="font-semibold">{stats.totalCalls}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-border">
-                  <span className="text-sm text-muted-foreground">All Time</span>
-                  <span className="font-bold text-lg">$1,456.80</span>
+                  <span className="text-sm text-muted-foreground">Avg Cost/Call</span>
+                  <span className="font-bold">{stats.avgCost}</span>
                 </div>
               </div>
             </div>
