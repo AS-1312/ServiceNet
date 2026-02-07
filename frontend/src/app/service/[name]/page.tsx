@@ -1,38 +1,62 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Star, TrendingUp, Activity, Clock, DollarSign, Play, Copy, Check, ExternalLink } from "lucide-react";
+import { ArrowLeft, Star, TrendingUp, Activity, Clock, DollarSign, Play, Copy, Check, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { useAccount } from "wagmi";
+import { useService, useYellowSessionWrite, useUSDCOperations } from "@/hooks";
+import { formatUSDC } from "@/lib/contracts";
 
 export default function ServiceDetailPage({ params }: { params: Promise<{ name: string }> }) {
   const { name } = use(params);
+  const { address, isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState("overview");
   const [sessionAmount, setSessionAmount] = useState("10");
+  const [sessionDuration, setSessionDuration] = useState("86400"); // 24 hours
   const [apiResponse, setApiResponse] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isTestingAPI, setIsTestingAPI] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Mock service data
+  // Fetch service data from contract
+  const { service: serviceData, formattedService, metrics, rating, isLoading: isLoadingService } = useService(name);
+  
+  // Yellow Network session management
+  const { openSession, isPending: isOpeningSession, isSuccess: sessionOpened, error: sessionError } = useYellowSessionWrite();
+  
+  // USDC operations
+  const { balance, balanceFormatted, needsApproval, approveYellow, isPending: isApproving } = useUSDCOperations();
+
+  // Handle successful session opening
+  useEffect(() => {
+    if (sessionOpened) {
+      alert('Session opened successfully! You can now use this service.');
+    }
+  }, [sessionOpened]);
+
+  // Combine real and mock data
   const service = {
     name: name,
-    description: "Real-time weather data for 1000+ cities worldwide with detailed forecasts",
-    longDescription: "Our weather API provides comprehensive weather data including current conditions, hourly forecasts, and 7-day predictions. Data is sourced from multiple weather stations and updated every 15 minutes for maximum accuracy.",
-    price: "$0.001",
+    description: serviceData ? `Service registered on ServiceNet` : "Real-time weather data for 1000+ cities worldwide with detailed forecasts",
+    longDescription: serviceData ? `This service is registered on the ServiceNet marketplace using ENS name resolution.` : "Our weather API provides comprehensive weather data including current conditions, hourly forecasts, and 7-day predictions. Data is sourced from multiple weather stations and updated every 15 minutes for maximum accuracy.",
+    price: formattedService?.pricePerCallFormatted || "$0.001",
+    priceUSDC: serviceData?.pricePerCall || BigInt(1000),
     priceModel: "per call",
-    calls: "12.5K",
+    calls: formattedService?.totalCallsFormatted || "0",
     uptime: "99.9%",
     avgResponse: "142ms",
-    rating: 4.8,
-    reviews: 45,
-    provider: "0x1234...5678",
-    providerName: "WeatherDAO",
+    rating: rating ? Number(rating.averageRating) / 100 : 0,
+    reviews: rating ? Number(rating.totalRatings) : 0,
+    provider: serviceData?.provider || "0x0000...0000",
+    providerName: name.split('.')[0],
     category: "Data Feeds",
-    tags: ["weather", "data", "real-time", "forecast"],
-    endpoint: "https://api.weather.eth",
+    tags: serviceData ? [name.split('.').pop() || 'eth', serviceData.active ? 'active' : 'inactive'] : ["weather", "data", "real-time", "forecast"],
+    endpoint: `https://${name}`,
     documentation: "ipfs://Qm...",
-    chains: ["Ethereum", "Base", "Arbitrum"],
+    chains: ["Ethereum", "Sepolia"],
     rateLimit: "1000 calls/hour",
-    minPurchase: "100 calls"
+    minPurchase: "100 calls",
+    isActive: serviceData?.active || false,
+    totalRevenue: formattedService?.totalRevenueFormatted || "$0"
   };
 
   const reviews = [
@@ -56,8 +80,27 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
     }
   ];
 
+  const handleOpenSession = async () => {
+    if (!isConnected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      // Check if approval is needed
+      if (needsApproval) {
+        await approveYellow(sessionAmount);
+      }
+      
+      // Open Yellow Network session
+      await openSession(name, sessionAmount, parseInt(sessionDuration));
+    } catch (error) {
+      console.error('Failed to open session:', error);
+    }
+  };
+
   const handleTestAPI = async () => {
-    setIsLoading(true);
+    setIsTestingAPI(true);
     // Simulate API call
     setTimeout(() => {
       setApiResponse(JSON.stringify({
@@ -68,7 +111,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
         wind_speed: 12,
         forecast: "Clear skies expected"
       }, null, 2));
-      setIsLoading(false);
+      setIsTestingAPI(false);
     }, 1000);
   };
 
@@ -77,6 +120,18 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Loading state
+  if (isLoadingService) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading service data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,6 +146,25 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            {/* Service Status Banner */}
+            {serviceData && (
+              <div className={`p-4 rounded-xl border mb-6 ${serviceData.active ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                <div className="flex items-center gap-2">
+                  {serviceData.active ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">⛓️ Service Active On-Chain</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      <span className="text-sm font-medium text-red-600 dark:text-red-400">Service Currently Inactive</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="bg-card rounded-2xl border border-border p-8">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -109,32 +183,38 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                     <Star className="w-4 h-4" />
                     <span className="text-sm">Rating</span>
                   </div>
-                  <div className="text-2xl font-bold">{service.rating}</div>
+                  <div className="text-2xl font-bold">
+                    {service.rating > 0 ? service.rating.toFixed(1) : 'N/A'}
+                  </div>
                   <div className="text-xs text-muted-foreground">{service.reviews} reviews</div>
                 </div>
                 <div>
                   <div className="flex items-center space-x-2 text-muted-foreground mb-1">
                     <TrendingUp className="w-4 h-4" />
-                    <span className="text-sm">Calls</span>
+                    <span className="text-sm">Total Calls</span>
                   </div>
                   <div className="text-2xl font-bold">{service.calls}</div>
-                  <div className="text-xs text-muted-foreground">today</div>
+                  <div className="text-xs text-muted-foreground">lifetime</div>
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2 text-muted-foreground mb-1">
+                    <DollarSign className="w-4 h-4" />
+                    <span className="text-sm">Revenue</span>
+                  </div>
+                  <div className="text-2xl font-bold">{service.totalRevenue}</div>
+                  <div className="text-xs text-muted-foreground">lifetime</div>
                 </div>
                 <div>
                   <div className="flex items-center space-x-2 text-muted-foreground mb-1">
                     <Activity className="w-4 h-4" />
-                    <span className="text-sm">Uptime</span>
+                    <span className="text-sm">Status</span>
                   </div>
-                  <div className="text-2xl font-bold text-success">{service.uptime}</div>
-                  <div className="text-xs text-muted-foreground">last 30 days</div>
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2 text-muted-foreground mb-1">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-sm">Response</span>
+                  <div className="text-2xl font-bold">
+                    {service.isActive ? '🟢' : '🔴'}
                   </div>
-                  <div className="text-2xl font-bold">{service.avgResponse}</div>
-                  <div className="text-xs text-muted-foreground">average</div>
+                  <div className="text-xs text-muted-foreground">
+                    {service.isActive ? 'active' : 'inactive'}
+                  </div>
                 </div>
               </div>
 
@@ -258,13 +338,19 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
 
                         <button
                           onClick={handleTestAPI}
-                          disabled={isLoading}
+                          disabled={isTestingAPI || !isConnected}
                           className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                         >
-                          <Play className="w-5 h-5" />
-                          <span>{isLoading ? "Testing..." : "Test Request"}</span>
+                          {isTestingAPI ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
+                          <span>{isTestingAPI ? "Testing..." : "Test Request"}</span>
                           <span className="text-sm opacity-75">({service.price})</span>
                         </button>
+                        
+                        {!isConnected && (
+                          <p className="text-xs text-center text-muted-foreground">
+                            Connect your wallet to test this API
+                          </p>
+                        )}
 
                         {apiResponse && (
                           <div>
@@ -326,7 +412,33 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
             <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
               <h3 className="text-lg font-semibold mb-4">Open Session</h3>
               
+              {!isConnected ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Connect your wallet to open a session</p>
+                </div>
+              ) : (
               <div className="space-y-4">
+                {/* USDC Balance */}
+                <div className="p-3 bg-secondary rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Your USDC Balance</span>
+                    <span className="font-semibold">${balanceFormatted}</span>
+                  </div>
+                </div>
+
+                {/* Session Error */}
+                {sessionError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <p className="text-sm text-red-600 dark:text-red-400">{sessionError}</p>
+                  </div>
+                )}
+
+                {/* Session Success */}
+                {sessionOpened && (
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <p className="text-sm text-green-600 dark:text-green-400">✓ Session opened successfully!</p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium mb-2">Session Amount (USDC)</label>
                   <div className="relative">
@@ -337,15 +449,59 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                       onChange={(e) => setSessionAmount(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                       placeholder="10.00"
+                      min="0.01"
+                      step="0.01"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    ≈ {Math.floor(parseFloat(sessionAmount) / parseFloat(service.price.replace("$", "")))} calls
+                    ≈ {Math.floor(parseFloat(sessionAmount || "0") / parseFloat(service.price.replace("$", "")))} calls
                   </p>
                 </div>
 
-                <button className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold">
-                  Open Session
+                <div>
+                  <label className="block text-sm font-medium mb-2">Duration</label>
+                  <select
+                    value={sessionDuration}
+                    onChange={(e) => setSessionDuration(e.target.value)}
+                    className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="3600">1 hour</option>
+                    <option value="86400">24 hours</option>
+                    <option value="604800">7 days</option>
+                    <option value="2592000">30 days</option>
+                  </select>
+                </div>
+
+                {needsApproval && (
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      ⚠️ USDC approval needed before opening session
+                    </p>
+                  </div>
+                )}
+
+                <button 
+                  onClick={handleOpenSession}
+                  disabled={isOpeningSession || isApproving || !service.isActive || sessionOpened}
+                  className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isApproving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Approving USDC...
+                    </>
+                  ) : isOpeningSession ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Opening Session...
+                    </>
+                  ) : sessionOpened ? (
+                    'Session Opened'
+                  ) : needsApproval ? (
+                    'Approve & Open Session'
+                  ) : (
+                    'Open Session'
+                  )}
                 </button>
 
                 <div className="pt-4 border-t border-border space-y-2 text-sm">
@@ -363,6 +519,7 @@ export default function ServiceDetailPage({ params }: { params: Promise<{ name: 
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-6">
