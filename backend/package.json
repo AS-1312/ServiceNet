@@ -1,0 +1,24 @@
+{
+  "name": "@servicenet/backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ServiceNet Backend Services - API micropayments infrastructure",
+  "scripts": {
+    "setup": "npm run setup:sdk && npm run setup:weather",
+    "setup:sdk": "cd provider-sdk && npm install",
+    "setup:weather": "cd services/weather-api && npm install",
+    "test": "tsx test-client.ts",
+    "dev:weather": "cd services/weather-api && npm run dev",
+    "build:sdk": "cd provider-sdk && npm run build",
+    "build:weather": "cd services/weather-api && npm run build",
+    "build": "npm run build:sdk && npm run build:weather"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "viem": "^2.9.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0"
+  }
+}
