@@ -2,6 +2,13 @@
 
 A decentralized marketplace where services are discovered via ENS names and consumed via instant, gas-free micropayments powered by Yellow state channels.
 
+---
+
+<p align="center">
+  <img src="cover-image.png" alt="Cover Image" style="width: 50%;" />
+</p>
+
+<br/>
 
 ## 📦 Quick Start
 
