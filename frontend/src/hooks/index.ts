@@ -31,3 +31,4 @@ export {
 // Re-export other hooks
 export { useENS } from './useENS';
 export { useENSResolver } from './useENSResolver';
+export { useSessionStats } from './useSessionStats';

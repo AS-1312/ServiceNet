@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, AlertCircle, X, Loader2 } from "lucide-react";
-import { useYellowSession, useYellowSessionWrite } from "@/hooks";
+import { Clock, AlertCircle, X, Loader2, Zap } from "lucide-react";
+import { useYellowSession, useYellowSessionWrite, useSessionStats } from "@/hooks";
 import { useEffect, useState } from "react";
 
 interface SessionCardProps {
@@ -20,6 +20,14 @@ export function SessionCard({ sessionId }: SessionCardProps) {
     isActive, 
     isLoading 
   } = useYellowSession(sessionId);
+  
+  // Fetch live stats from API provider (off-chain tracking via Yellow Network)
+  // TODO: Get service endpoint from ENS resolution or service metadata
+  const serviceEndpoint = 'http://localhost:3001';
+  const { data: liveStats, isLoading: isLoadingStats } = useSessionStats(
+    isActive ? sessionId : undefined,
+    serviceEndpoint
+  );
   
   // Close session functionality
   const { 
@@ -165,12 +173,34 @@ export function SessionCard({ sessionId }: SessionCardProps) {
       <div className="mb-4">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-muted-foreground">Calls Made</span>
-          <span className="font-semibold">{Number(session.callsMade).toLocaleString()}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">
+              {isActive && liveStats 
+                ? liveStats.callsMade.toLocaleString()
+                : Number(session.callsMade).toLocaleString()}
+            </span>
+            {isActive && liveStats?.yellowEnabled && (
+              <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-500/10 px-2 py-0.5 rounded" title="Zero-gas tracking via Yellow Network">
+                <Zap className="w-3 h-3" />
+                Live
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Spent: {formattedSession.spentFormatted}</span>
+          <span>
+            Spent: {isActive && liveStats 
+              ? `$${liveStats.totalSpent.toFixed(6)}`
+              : formattedSession.spentFormatted}
+          </span>
           <span>Per call: ${formattedSession.pricePerCallFormatted}</span>
         </div>
+        {isActive && liveStats?.yellowEnabled && (
+          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+            <Zap className="w-3 h-3 text-yellow-500" />
+            <span>Zero-gas updates via Yellow Network • Refreshing every 3s</span>
+          </div>
+        )}
       </div>
 
       {/* Warnings */}
