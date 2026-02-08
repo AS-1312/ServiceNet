@@ -5,12 +5,23 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+// Check if Yellow Network should be enabled
+const enableYellow = process.env.YELLOW_ENABLED === 'true';
+const yellowConfig = enableYellow ? {
+  endpoint: process.env.YELLOW_ENDPOINT || 'wss://clearnet-sandbox.yellow.com/ws',
+  privateKey: process.env.PROVIDER_PRIVATE_KEY as `0x${string}` | undefined,
+  rpcUrl: process.env.RPC_URL,
+  enableTestMode: true // Use test mode for now (mock Yellow Network)
+} : undefined;
+
 // Initialize ServiceNet SDK
 const sdk = new ServiceNetSDK({
   ensName: 'weather.api.eth',
   pricePerCall: 0.001, // $0.001 per call
   apiEndpoint: process.env.API_ENDPOINT || 'http://localhost:3001',
-  enableCors: true
+  enableCors: true,
+  enableYellow,
+  yellowConfig
 });
 
 const app = sdk.getApp();
@@ -74,6 +85,26 @@ app.get('/info', (req, res) => {
       'Global coverage (1000+ cities)',
       'Micropayment enabled ($0.001 per call)'
     ]
+  });
+});
+
+/**
+ * GET /session/:sessionId/stats
+ * Get real-time session statistics (no auth required)
+ * This provides off-chain call tracking via Yellow Network
+ */
+app.get('/session/:sessionId/stats', (req, res) => {
+  const { sessionId } = req.params;
+  
+  const stats = sdk.getSessionStats(sessionId);
+  
+  res.json({
+    sessionId,
+    callsMade: stats.callsMade,
+    totalSpent: stats.totalSpent,
+    pricePerCall: stats.pricePerCall,
+    yellowEnabled: sdk.isYellowEnabled(),
+    lastUpdated: new Date().toISOString()
   });
 });
 
@@ -279,6 +310,9 @@ app.use((err: any, req: any, res: any, next: any) => {
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
+  const yellowStatus = sdk.isYellowEnabled() ? '🟢 Enabled (Test Mode)' : '🔴 Disabled';
+  const gasInfo = sdk.isYellowEnabled() ? '⚡ 0 gas per call' : '⛽ Standard gas';
+  
   console.log(`
 ╔════════════════════════════════════════════════════╗
 ║                                                    ║
@@ -290,6 +324,8 @@ app.listen(PORT, () => {
 ║  Endpoint:    http://localhost:${PORT}               ║
 ║  Price:       $0.001 per call                      ║
 ║  Status:      🟢 Active                             ║
+║  Yellow:      ${yellowStatus}                   ║
+║  Gas Cost:    ${gasInfo}                     ║
 ║                                                    ║
 ╠════════════════════════════════════════════════════╣
 ║                                                    ║

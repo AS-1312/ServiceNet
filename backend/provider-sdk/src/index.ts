@@ -1,18 +1,25 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { verifyMessage } from 'viem';
+import { verifyMessage, parseUnits } from 'viem';
 import cors from 'cors';
+import { YellowManager, type YellowConfig } from './yellow';
 
 export interface ServiceNetSDKConfig {
   ensName: string;
   pricePerCall: number; // USDC (e.g., 0.001)
   apiEndpoint?: string;
   enableCors?: boolean;
+  enableYellow?: boolean;
+  yellowConfig?: YellowConfig;
 }
+
+export { YellowManager, type YellowConfig };
 
 // Extend Express Request type
 interface AuthenticatedRequest extends Request {
   sessionId?: string;
   consumerAddress?: string;
+  yellowSessionId?: string;
+  onChainSessionId?: string;
 }
 
 export class ServiceNetSDK {
@@ -20,12 +27,15 @@ export class ServiceNetSDK {
   private config: ServiceNetSDKConfig;
   private callCounts: Map<string, number>; // sessionId -> call count
   private sessionSpent: Map<string, number>; // sessionId -> total spent
+  private yellowManager?: YellowManager;
+  private yellowSessionMap: Map<string, string>; // onChainSessionId -> yellowSessionId
   
   constructor(config: ServiceNetSDKConfig) {
     this.app = express();
     this.config = config;
     this.callCounts = new Map();
     this.sessionSpent = new Map();
+    this.yellowSessionMap = new Map();
     
     // Default middleware
     this.app.use(express.json());
@@ -36,6 +46,27 @@ export class ServiceNetSDK {
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
         allowedHeaders: ['Content-Type', 'x-session-id', 'x-session-signature', 'x-consumer-address']
       }));
+    }
+    
+    // Initialize Yellow Network if enabled
+    if (config.enableYellow && config.yellowConfig) {
+      this.initializeYellow(config.yellowConfig);
+    }
+  }
+  
+  /**
+   * Initialize Yellow Network connection
+   */
+  private async initializeYellow(config: YellowConfig): Promise<void> {
+    try {
+      console.log('[ServiceNet SDK] Initializing Yellow Network...');
+      this.yellowManager = new YellowManager(config);
+      await this.yellowManager.connect();
+      console.log('[ServiceNet SDK] ✅ Yellow Network ready');
+    } catch (error) {
+      console.error('[ServiceNet SDK] ⚠️  Yellow Network error:', error instanceof Error ? error.message : error);
+      console.warn('[ServiceNet SDK] ⚠️  Yellow Network unavailable, using fallback');
+      this.yellowManager = undefined;
     }
   }
   
@@ -70,14 +101,34 @@ export class ServiceNetSDK {
         
         if (!isValid) {
           return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Invalid session signature'
+            error: 'Invalid signature',
+            message: 'Session signature verification failed'
           });
         }
         
-        // Store session info in request
+        // Store session info on request
         req.sessionId = sessionId;
         req.consumerAddress = consumerAddress;
+        req.onChainSessionId = sessionId;
+        
+        // Get or create Yellow session ID
+        if (this.yellowManager) {
+          let yellowSessionId = this.yellowSessionMap.get(sessionId);
+          
+          if (!yellowSessionId) {
+            // Create Yellow App Session on first API call
+            // Initial amount: $10 (10_000_000 with 6 decimals)
+            yellowSessionId = await this.yellowManager.createAppSession(
+              consumerAddress,
+              parseUnits('10', 6)
+            );
+            this.yellowSessionMap.set(sessionId, yellowSessionId);
+            console.log(`[ServiceNet SDK] Created Yellow session ${yellowSessionId.slice(0, 10)}... for on-chain session`);
+          }
+          
+          req.yellowSessionId = yellowSessionId;
+        }
+        
         next();
       } catch (error) {
         console.error('[ServiceNet SDK] Authentication error:', error);
@@ -109,19 +160,75 @@ export class ServiceNetSDK {
         const totalSpent = newCount * callCost;
         this.sessionSpent.set(req.sessionId, totalSpent);
         
+        // Update Yellow Network state channel (0 gas!)
+        if (this.yellowManager && req.yellowSessionId) {
+          try {
+            const callCostUSDC = parseUnits(callCost.toString(), 6);
+            this.yellowManager.updateState(req.yellowSessionId, callCostUSDC);
+            res.setHeader('X-ServiceNet-Yellow-Enabled', 'true');
+            res.setHeader('X-ServiceNet-Gas-Cost', '0.000000');
+          } catch (error) {
+            console.error('[ServiceNet SDK] Yellow state update failed:', error);
+            res.setHeader('X-ServiceNet-Yellow-Enabled', 'false');
+          }
+        } else {
+          res.setHeader('X-ServiceNet-Yellow-Enabled', 'false');
+          res.setHeader('X-ServiceNet-Gas-Cost', 'varies');
+        }
+        
         // Add usage info to response headers
         res.setHeader('X-ServiceNet-Calls-Made', newCount.toString());
         res.setHeader('X-ServiceNet-Price-Per-Call', callCost.toFixed(6));
         res.setHeader('X-ServiceNet-Total-Spent', totalSpent.toFixed(6));
         res.setHeader('X-ServiceNet-Provider', this.config.ensName);
         
-        console.log(`[ServiceNet SDK] 📞 API call #${newCount} | Session: ${req.sessionId.slice(0, 10)}... | Cost: $${totalSpent.toFixed(6)}`);
+        const yellowInfo = req.yellowSessionId ? ` | Yellow: ${req.yellowSessionId.slice(0, 10)}... | ⚡ 0 gas` : '';
+        console.log(`[ServiceNet SDK] 📞 API call #${newCount} | Session: ${req.sessionId.slice(0, 10)}... | Cost: $${totalSpent.toFixed(6)}${yellowInfo}`);
         
         return originalJson(data);
       };
       
       next();
     };
+  }
+  
+  /**
+   * Close Yellow session and get settlement data
+   */
+  async closeYellowSession(sessionId: string): Promise<{
+    consumerRefund: bigint;
+    providerPayment: bigint;
+  } | null> {
+    if (!this.yellowManager) return null;
+    
+    const yellowSessionId = this.yellowSessionMap.get(sessionId);
+    if (!yellowSessionId) return null;
+    
+    const settlement = await this.yellowManager.closeAppSession(yellowSessionId);
+    this.yellowSessionMap.delete(sessionId);
+    
+    return settlement;
+  }
+  
+  /**
+   * Get Yellow Manager instance
+   */
+  getYellowManager(): YellowManager | undefined {
+    return this.yellowManager;
+  }
+  
+  /**
+   * Check if Yellow Network is enabled and connected
+   */
+  isYellowEnabled(): boolean {
+    return this.yellowManager?.connected ?? false;
+  }
+  
+  /**
+   * Get the Express app instance
+   */
+  getApp(): express.Application {
+    return this.app;
   }
   
   /**
@@ -155,13 +262,6 @@ export class ServiceNetSDK {
   clearSession(sessionId: string): void {
     this.callCounts.delete(sessionId);
     this.sessionSpent.delete(sessionId);
-  }
-  
-  /**
-   * Get the Express app instance
-   */
-  getApp(): express.Application {
-    return this.app;
   }
   
   /**
