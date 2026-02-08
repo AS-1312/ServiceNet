@@ -7,30 +7,27 @@ import { privateKeyToAccount } from 'viem/accounts';
 
 const API_ENDPOINT = process.env.API_ENDPOINT || 'http://localhost:3001';
 
-// Test private key (DO NOT use in production)
-const TEST_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+// Test private key
+const PRIVATE_KEY = process.env.PRIVATE_KEY || '';
+const SESSION_ID = process.env.SESSION_ID || '';
 
 async function testWeatherAPI() {
   console.log('🧪 Testing Weather API with ServiceNet SDK\n');
   console.log('═══════════════════════════════════════════\n');
   
-  // Step 1: Create test account
   console.log('1️⃣  Setting up test account...');
-  const account = privateKeyToAccount(TEST_PRIVATE_KEY);
+  const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
   console.log(`   ✓ Address: ${account.address}\n`);
   
-  // Step 2: Generate session ID
-  console.log('2️⃣  Generating session ID...');
-  const sessionId = '0x' + Date.now().toString(16).padStart(64, '0');
+  console.log('2️⃣  Using existing session ID...');
+  const sessionId = SESSION_ID;
   console.log(`   ✓ Session ID: ${sessionId}\n`);
   
-  // Step 3: Sign session
   console.log('3️⃣  Signing session...');
   const message = `ServiceNet Session: ${sessionId}`;
   const signature = await account.signMessage({ message });
   console.log(`   ✓ Signature: ${signature.slice(0, 20)}...${signature.slice(-10)}\n`);
   
-  // Step 4: Test public endpoint (no auth)
   console.log('4️⃣  Testing public endpoint /info...');
   try {
     const infoResponse = await fetch(`${API_ENDPOINT}/info`);
@@ -40,10 +37,10 @@ async function testWeatherAPI() {
     console.log(`   ✓ Endpoints: ${infoData.endpoints.length} available\n`);
   } catch (error) {
     console.error('   ✗ Failed to fetch service info:', error);
+    console.error('   💡 Make sure Weather API is running: npm run dev:weather');
     return;
   }
   
-  // Step 5: Test authenticated endpoint
   console.log('5️⃣  Testing authenticated endpoint /weather/london...');
   try {
     const weatherResponse = await fetch(`${API_ENDPOINT}/weather/london`, {
@@ -63,16 +60,21 @@ async function testWeatherAPI() {
     const weatherData = await weatherResponse.json();
     const callsMade = weatherResponse.headers.get('X-ServiceNet-Calls-Made');
     const totalCost = weatherResponse.headers.get('X-ServiceNet-Total-Spent');
+    const yellowEnabled = weatherResponse.headers.get('X-ServiceNet-Yellow-Enabled');
+    const gasCost = weatherResponse.headers.get('X-ServiceNet-Gas-Cost');
     
     console.log(`   ✓ Weather: ${weatherData.data.current.temperature}°F, ${weatherData.data.current.conditions}`);
     console.log(`   ✓ Calls Made: ${callsMade}`);
-    console.log(`   ✓ Total Cost: $${totalCost}\n`);
+    console.log(`   ✓ Total Cost: $${totalCost}`);
+    if (yellowEnabled === 'true') {
+      console.log(`   ⚡ Yellow Network: ENABLED | Gas Cost: ${gasCost} ETH`);
+    }
+    console.log('');
   } catch (error) {
     console.error('   ✗ API call failed:', error);
     return;
   }
   
-  // Step 6: Make multiple calls
   console.log('6️⃣  Making 5 additional API calls...');
   const cities = ['paris', 'tokyo', 'new-york', 'sydney', 'berlin'];
   
@@ -120,11 +122,11 @@ async function testWeatherAPI() {
   console.log('═══════════════════════════════════════════');
   console.log('✅ All tests completed successfully!\n');
   console.log('💡 Key Takeaways:');
-  console.log('   • Zero gas fees for API calls');
+  console.log('   • Zero gas fees for API calls (Yellow Network)');
   console.log('   • Simple signature-based authentication');
   console.log('   • Transparent cost tracking in headers');
-  console.log('   • Pay-per-use micropayments ($0.001/call)\n');
+  console.log('   • Pay-per-use micropayments ($0.001/call)');
+  console.log('   • Off-chain state updates, on-chain settlement only\n');
 }
 
-// Run tests
 testWeatherAPI().catch(console.error);

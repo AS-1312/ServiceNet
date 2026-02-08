@@ -11,7 +11,7 @@ const yellowConfig = enableYellow ? {
   endpoint: process.env.YELLOW_ENDPOINT || 'wss://clearnet-sandbox.yellow.com/ws',
   privateKey: process.env.PROVIDER_PRIVATE_KEY as `0x${string}` | undefined,
   rpcUrl: process.env.RPC_URL,
-  enableTestMode: true // Use test mode for now (mock Yellow Network)
+  enableTestMode: false // Use test mode for now (mock Yellow Network)
 } : undefined;
 
 // Initialize ServiceNet SDK
